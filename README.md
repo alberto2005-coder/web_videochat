@@ -2,6 +2,9 @@
 
 Esta aplicación combina **frontend estático** (HTML, CSS, JS) y un **backend en Node.js con Express y WebSockets (Socket.IO)**. Está lista para ejecutarse localmente o desplegarse en cualquier servidor que soporte Node.js.
 
+<img width="1914" height="444" alt="image" src="https://github.com/user-attachments/assets/90742dcc-f80d-4f09-bcc3-1143db8be657" />
+<img width="1917" height="444" alt="image" src="https://github.com/user-attachments/assets/0bf0ab12-af07-47ad-8907-608fcb0eb76e" />
+
 ---
 
 ## 📁 Estructura del proyecto
