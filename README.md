@@ -52,7 +52,8 @@ npm install
 node server.js
 ```
 
-> **Nota:** No uses `npx serve .` para ejecutar la app, ya que solo sirve archivos estáticos y no ejecuta el backend ni WebSockets.
+> **Nota:** Si muestra algo raro ejecuta con `npx serve .` para ejecutar la app, ya que solo sirve archivos estáticos y no ejecuta el backend ni WebSockets.
+Si aun asi no va saca el index.html de la carpeta public y ejecuta `npx serve .`.
 
 4. Abre tu navegador en [http://localhost:3000](http://localhost:3000)
 
