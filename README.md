@@ -1,6 +1,6 @@
 # Mi App Web con WebSockets
 
-Esta aplicación combina **frontend estático** (HTML, CSS, JS) y un **backend en Node.js con Express y WebSockets (Socket.IO)**. Está lista para ejecutarse localmente o desplegarse en cualquier servidor que soporte Node.js.
+Esta aplicación combina **frontend estático** (HTML, CSS, JS) y un **backend en Node.js con Express y WebSockets nativos (librería `ws`)**. Está lista para ejecutarse localmente o desplegarse en cualquier servidor que soporte Node.js.
 
 <img width="1914" height="444" alt="image" src="https://github.com/user-attachments/assets/90742dcc-f80d-4f09-bcc3-1143db8be657" />
 <img width="1917" height="444" alt="image" src="https://github.com/user-attachments/assets/0bf0ab12-af07-47ad-8907-608fcb0eb76e" />
@@ -15,9 +15,7 @@ Esta aplicación combina **frontend estático** (HTML, CSS, JS) y un **backend e
 ├─ server.js           # Servidor Express + WebSocket
 ├─ package.json
 └─ public/             # Frontend estático
-    ├─ index.html
-    ├─ style.css
-    └─ script.js
+    └─ index.html      # HTML + CSS + JS inline (WebRTC y WebSocket)
 ```
 
 * **public/**: Carpeta con todo el frontend.
@@ -55,12 +53,12 @@ npm install
 node server.js
 ```
 
-> **Nota:** Si muestra algo raro ejecuta con `npx serve .` para ejecutar la app, ya que solo sirve archivos estáticos y no ejecuta el backend ni WebSockets.
-Si aun asi no va saca el index.html de la carpeta public y ejecuta `npx serve .`.
+> **Nota:** abre la app desde el propio servidor (`http://localhost:3000`). No uses
+> `npx serve .`: solo sirve archivos estáticos y deja sin backend ni WebSocket.
 
 4. Abre tu navegador en [http://localhost:3000](http://localhost:3000)
 
-   > El puerto puede cambiar según la configuración de tu entorno (usa `process.env.PORT` si es necesario).
+   > El puerto se toma de `process.env.PORT` (por defecto 3000).
 
 ---
 
@@ -86,34 +84,32 @@ server.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
 
 ## 🔗 Conexión WebSocket desde el frontend
 
-En `public/script.js`:
+El frontend abre la conexión en `public/index.html` (script inline), usando el mismo host que sirve la página:
 
 ```js
-const socket = io(); // Se conecta al mismo host automáticamente
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
 
-socket.emit('mensaje', 'Hola desde el cliente');
+ws.onopen = () => ws.send(JSON.stringify({ type: 'join', roomId: 'sala-123' }));
 
-socket.on('respuesta', (data) => {
-  console.log('Respuesta del servidor:', data);
-});
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Mensaje del servidor:', data);
+};
 ```
 
-* No necesitas cambiar la URL si el frontend y el backend están en el mismo dominio/host.
-* Si el frontend está en otro dominio, cambia a:
-
-```js
-const socket = io('https://tu-servidor.com');
-```
+* No hay que cambiar la URL: se conecta al mismo dominio/host y usa `wss://` automáticamente si la página va por HTTPS.
+* El servidor solo reenvía los mensajes `join` y `signal` al resto de la sala.
 
 ---
 
 ## 📝 Notas importantes
 
 * Asegúrate de que la carpeta **public/** exista y contenga `index.html`.
-* Para SPA (rutas internas en frontend), usa:
+* Para SPA (rutas internas en frontend) con Express 5, usa un comodín con nombre:
 
 ```js
-app.get('*', (req, res) => {
+app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 ```

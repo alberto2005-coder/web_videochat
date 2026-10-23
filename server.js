@@ -1,8 +1,11 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const WebSocket = require("ws");
 
 const app = express();
+app.use(express.static(path.join(__dirname, "public")));
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -51,6 +54,8 @@ wss.on("connection", (ws) => {
     });
 });
 
-server.listen(3000, () => {
-    console.log("Servidor de señalización en http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log(`Servidor de señalización en http://localhost:${PORT}`);
 });

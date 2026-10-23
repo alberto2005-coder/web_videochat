@@ -603,8 +603,9 @@
             ]
         };
 
-        // Conectar al servidor de señalización
-        const ws = new WebSocket("ws://localhost:3000");
+        // Conectar al servidor de señalización en el mismo host (http -> ws, https -> wss)
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
 
         const signalingSystem = {
             send: function(message) {
