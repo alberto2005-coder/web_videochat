@@ -27,13 +27,16 @@ Esta aplicación combina **frontend estático** (HTML, CSS, JS) y un **backend e
 
 ## ⚙️ Requisitos
 
-* Node.js v18 o superior
+* Node.js 24.22.1+ (LTS; también válido 22.23.4+ o 26.12.1+)
 * NPM
-* Dependencias del proyecto:
+* Dependencias del proyecto (`express` y `ws`):
 
   ```bash
-  npm install express socket.io
+  npm install
   ```
+
+> `.nvmrc` fija Node 24.22.1 y `.npmrc` activa `engine-strict`: `npm install` falla si el host
+> no usa un parche seguro. Node 18 y 20 están EOL y no deben usarse.
 
 ---
 
@@ -74,6 +77,10 @@ server.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
 ```
 
 5. Abre la URL pública del servidor para acceder al frontend.
+
+> **Runtime del host:** Node 22.23.4+, 24.22.1+ o 26.12.1+. Está declarado en `package.json`
+> (`engines`) y `.nvmrc`; Render y Railway lo respetan automáticamente. No uses Node 18/20:
+> están fuera de soporte y sin parches de seguridad.
 
 ---
 
