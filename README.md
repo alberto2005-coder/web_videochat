@@ -1,124 +1,225 @@
-# Mi App Web con WebSockets
+# Web Videochat (WebRTC + WebSocket)
 
-Esta aplicación combina **frontend estático** (HTML, CSS, JS) y un **backend en Node.js con Express y WebSockets nativos (librería `ws`)**. Está lista para ejecutarse localmente o desplegarse en cualquier servidor que soporte Node.js.
-
-<img width="1914" height="444" alt="image" src="https://github.com/user-attachments/assets/90742dcc-f80d-4f09-bcc3-1143db8be657" />
-<img width="1917" height="444" alt="image" src="https://github.com/user-attachments/assets/0bf0ab12-af07-47ad-8907-608fcb0eb76e" />
+[Español](#español) · [English](#english)
 
 ---
 
-## 📁 Estructura del proyecto
+## Español
 
-```
-/mi-app
-│
-├─ server.js           # Servidor Express + WebSocket
-├─ package.json
-└─ public/             # Frontend estático
-    └─ index.html      # HTML + CSS + JS inline (WebRTC y WebSocket)
-```
+### Índice
 
-* **public/**: Carpeta con todo el frontend.
-* **server.js**: Backend que sirve archivos estáticos y maneja WebSockets.
+- [Descripción](#descripción)
+- [Características](#características)
+- [Tecnologías](#tecnologías)
+- [Requisitos](#requisitos)
+- [Instalación y ejecución](#instalación-y-ejecución)
+- [Cómo funciona](#cómo-funciona)
+- [Despliegue](#despliegue)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Problemas frecuentes](#problemas-frecuentes)
+- [Licencia](#licencia)
 
----
+### Descripción
 
-## ⚙️ Requisitos
+Aplicación de videollamada en el navegador que combina un **frontend estático** (HTML, CSS y JavaScript) con un **backend en Node.js** usando **Express 5** y **WebSockets nativos** mediante la librería `ws`.
 
-* Node.js 24.22.1+ (LTS; también válido 22.23.4+ o 26.12.1+)
-* NPM
-* Dependencias del proyecto (`express` y `ws`):
+El servidor no procesa vídeo ni audio: solo sirve los archivos estáticos y actúa como **intermediario de señalización** para que dos navegadores puedan negociar una conexión **WebRTC** peer-to-peer.
 
-  ```bash
-  npm install
-  ```
+### Características
 
-> `.nvmrc` fija Node 24.22.1 y `.npmrc` activa `engine-strict`: `npm install` falla si el host
-> no usa un parche seguro. Node 18 y 20 están EOL y no deben usarse.
+- **Videollamada peer-to-peer** con WebRTC, sin servidor de medios.
+- **Señalización por WebSocket** en el mismo host que sirve la página.
+- **Salas**: los mensajes se reenvían solo a los demás miembros de la misma `roomId`.
+- **Sin build**: un único `index.html` con el CSS y el JS en línea.
+- **Protocolo automático**: usa `wss://` si la página se sirve por HTTPS.
+- **Puerto configurable** con la variable `PORT`.
 
----
+### Tecnologías
 
-## 💻 Instalación y ejecución local
+| Capa | Tecnología |
+|---|---|
+| Servidor | Node.js + Express 5 |
+| Tiempo real | `ws` (WebSocket nativo) |
+| Cliente | HTML5, CSS3, JavaScript |
+| Medios | WebRTC (`RTCPeerConnection`) |
 
-1. Clona el repositorio o descarga el proyecto.
-2. Instala las dependencias:
+### Requisitos
+
+- **Node.js 22.23.4+, 24.22.1+ o 26.12.1+**. El repositorio incluye `.nvmrc` y `.npmrc` con `engine-strict`, así que `npm install` **falla** si usas una versión fuera de ese rango. Node 18 y 20 están fuera de soporte.
+- npm.
+- Un navegador moderno con soporte de WebRTC (Chrome, Firefox, Edge o Safari).
+
+### Instalación y ejecución
 
 ```bash
+git clone https://github.com/alberto2005-coder/web_videochat.git
+cd web_videochat
 npm install
-```
-
-3. Ejecuta el servidor:
-
-```bash
 node server.js
 ```
 
-> **Nota:** abre la app desde el propio servidor (`http://localhost:3000`). No uses
-> `npx serve .`: solo sirve archivos estáticos y deja sin backend ni WebSocket.
+Abre [http://localhost:3000](http://localhost:3000). El puerto se toma de `process.env.PORT` y vale `3000` por defecto.
 
-4. Abre tu navegador en [http://localhost:3000](http://localhost:3000)
+> **Importante:** entra siempre por la URL del servidor. Si usas `npx serve .` solo se sirven archivos estáticos: no hay backend ni WebSocket y la videollamada no funciona.
 
-   > El puerto se toma de `process.env.PORT` (por defecto 3000).
+### Cómo funciona
 
----
+1. Al cargar la página, el cliente abre un WebSocket contra el mismo host:
 
-## 🌐 Despliegue en un servidor
+   ```js
+   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+   const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+   ws.onopen = () => ws.send(JSON.stringify({ type: 'join', roomId: 'sala-123' }));
+   ```
 
-1. **Sube todo el proyecto** al servidor que soporte Node.js.
-2. Asegúrate de instalar dependencias con `npm install`.
-3. Ejecuta el servidor usando `node server.js` o un gestor de procesos como **PM2**.
-4. Si usas un servicio que asigna el puerto automáticamente (Render, Heroku, Railway, Fly.io, etc.):
+2. El servidor guarda la conexión en la sala indicada y **retransmite** los mensajes `join` y `signal` al resto de participantes de esa sala.
+3. Con esos mensajes, los navegadores intercambian la oferta, la respuesta y los candidatos ICE de WebRTC.
+4. Una vez establecida la conexión, el vídeo y el audio viajan directamente entre los navegadores.
 
-```js
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+### Despliegue
+
+1. Sube el proyecto completo a cualquier host que soporte Node.js.
+2. Ejecuta `npm install`.
+3. Arranca con `node server.js` o con un gestor de procesos como **PM2**.
+4. Si la plataforma asigna el puerto automáticamente (Render, Railway, Fly.io, Heroku…), el código ya lo respeta:
+
+   ```js
+   const PORT = process.env.PORT || 3000;
+   server.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+   ```
+
+### Estructura del proyecto
+
+```text
+web_videochat/
+├── server.js          # Express + servidor WebSocket (señalización)
+├── package.json       # Dependencias y rango de Node permitido
+├── .nvmrc             # Versión de Node fijada
+├── .npmrc             # Activa engine-strict
+├── public/
+│   └── index.html     # HTML + CSS + JS (WebRTC y WebSocket)
+├── LICENSE
+└── README.md
 ```
 
-5. Abre la URL pública del servidor para acceder al frontend.
+### Problemas frecuentes
 
-> **Runtime del host:** Node 22.23.4+, 24.22.1+ o 26.12.1+. Está declarado en `package.json`
-> (`engines`) y `.nvmrc`; Render y Railway lo respetan automáticamente. No uses Node 18/20:
-> están fuera de soporte y sin parches de seguridad.
+- **La página carga pero no conecta**: estás sirviendo la carpeta con un servidor estático. Usa `node server.js`.
+- **`npm install` falla con `engine-strict`**: cambia de versión de Node (`nvm use`) al rango admitido.
+- **No se ven ni se oyen los demás**: revisa los permisos de cámara y micrófono del navegador y que la página se sirva por HTTPS (WebRTC lo exige fuera de `localhost`).
+- **Rutas internas del frontend con Express 5**: usa un comodín con nombre, `app.get('/*splat', ...)`.
+
+### Licencia
+
+Este proyecto se distribuye bajo la **licencia MIT**. Consulta [LICENSE](LICENSE).
 
 ---
 
-## 🔗 Conexión WebSocket desde el frontend
+## English
 
-El frontend abre la conexión en `public/index.html` (script inline), usando el mismo host que sirve la página:
+### Table of contents
 
-```js
-const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+- [Overview](#overview)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Requirements](#requirements)
+- [Install and run](#install-and-run)
+- [How it works](#how-it-works)
+- [Deployment](#deployment)
+- [Project structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-ws.onopen = () => ws.send(JSON.stringify({ type: 'join', roomId: 'sala-123' }));
+### Overview
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Mensaje del servidor:', data);
-};
+A browser video-call app that combines a **static frontend** (HTML, CSS and JavaScript) with a **Node.js backend** built on **Express 5** and **native WebSockets** via the `ws` library.
+
+The server never handles video or audio: it only serves the static files and acts as a **signaling relay** so two browsers can negotiate a peer-to-peer **WebRTC** connection.
+
+### Features
+
+- **Peer-to-peer video calls** over WebRTC, with no media server.
+- **WebSocket signaling** on the same host that serves the page.
+- **Rooms**: messages are forwarded only to the other members of the same `roomId`.
+- **No build step**: a single `index.html` with inline CSS and JS.
+- **Automatic protocol**: uses `wss://` when the page is served over HTTPS.
+- **Configurable port** through the `PORT` variable.
+
+### Tech stack
+
+| Layer | Technology |
+|---|---|
+| Server | Node.js + Express 5 |
+| Realtime | `ws` (native WebSocket) |
+| Client | HTML5, CSS3, JavaScript |
+| Media | WebRTC (`RTCPeerConnection`) |
+
+### Requirements
+
+- **Node.js 22.23.4+, 24.22.1+ or 26.12.1+**. The repo ships `.nvmrc` and `.npmrc` with `engine-strict`, so `npm install` **fails** on any other version. Node 18 and 20 are out of support.
+- npm.
+- A modern browser with WebRTC support (Chrome, Firefox, Edge or Safari).
+
+### Install and run
+
+```bash
+git clone https://github.com/alberto2005-coder/web_videochat.git
+cd web_videochat
+npm install
+node server.js
 ```
 
-* No hay que cambiar la URL: se conecta al mismo dominio/host y usa `wss://` automáticamente si la página va por HTTPS.
-* El servidor solo reenvía los mensajes `join` y `signal` al resto de la sala.
+Open [http://localhost:3000](http://localhost:3000). The port comes from `process.env.PORT` and defaults to `3000`.
 
----
+> **Important:** always go through the server URL. `npx serve .` only serves static files: there is no backend and no WebSocket, so the call will not work.
 
-## 📝 Notas importantes
+### How it works
 
-* Asegúrate de que la carpeta **public/** exista y contenga `index.html`.
-* Para SPA (rutas internas en frontend) con Express 5, usa un comodín con nombre:
+1. On load, the client opens a WebSocket against the same host:
 
-```js
-app.get('/*splat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+   ```js
+   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+   const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+   ws.onopen = () => ws.send(JSON.stringify({ type: 'join', roomId: 'sala-123' }));
+   ```
+
+2. The server keeps the connection in the given room and **relays** `join` and `signal` messages to the other participants of that room.
+3. With those messages, browsers exchange the WebRTC offer, answer and ICE candidates.
+4. Once connected, video and audio flow directly between browsers.
+
+### Deployment
+
+1. Upload the whole project to any Node.js-capable host.
+2. Run `npm install`.
+3. Start it with `node server.js` or a process manager such as **PM2**.
+4. If the platform assigns the port automatically (Render, Railway, Fly.io, Heroku…), the code already handles it:
+
+   ```js
+   const PORT = process.env.PORT || 3000;
+   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+   ```
+
+### Project structure
+
+```text
+web_videochat/
+├── server.js          # Express + WebSocket signaling server
+├── package.json       # Dependencies and allowed Node range
+├── .nvmrc             # Pinned Node version
+├── .npmrc             # Enables engine-strict
+├── public/
+│   └── index.html     # HTML + CSS + JS (WebRTC and WebSocket)
+├── LICENSE
+└── README.md
 ```
 
-* **No uses `npx serve .` para ejecutar la app**, ya que solo sirve archivos estáticos y no ejecuta el backend ni WebSockets.
-* Este proyecto funciona tanto en **local** como en cualquier **servidor Node.js compatible**.
+### Troubleshooting
 
----
+- **Page loads but never connects**: you are serving the folder with a static server. Use `node server.js`.
+- **`npm install` fails with `engine-strict`**: switch Node (`nvm use`) to a supported version.
+- **No video or audio from the other side**: check camera/microphone permissions and make sure the page is served over HTTPS (WebRTC requires it outside `localhost`).
+- **Frontend routes with Express 5**: use a named wildcard, `app.get('/*splat', ...)`.
 
-## 🚀 Listo para usar
+### License
 
-¡Eso es todo! Al abrir la URL de tu servidor deberías ver tu aplicación funcionando con WebSockets activos.
+This project is released under the **MIT License**. See [LICENSE](LICENSE).
